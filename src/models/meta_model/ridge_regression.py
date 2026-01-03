@@ -1,49 +1,23 @@
 import numpy as np
 
 class RidgeRegressionMetaModel:
-    """
-    Ridge Regression Meta-Model implement từ đầu
-    Dùng để combine predictions từ base models
-    """
-    
     def __init__(self, alpha=0.5, fit_intercept=True):
-        """
-        Khởi tạo Ridge Regression Meta-Model
-        
-        Parameters:
-        -----------
-        alpha : float
-            Regularization strength (λ)
-            alpha càng lớn, regularization càng mạnh
-        fit_intercept : bool
-            Có thêm bias term (intercept) hay không
-        """
         self.alpha = alpha
         self.fit_intercept = fit_intercept
         self.weights = None  # Vector trọng số w
         self.bias = 0.0  # Bias term (nếu có)
         
     def _add_intercept(self, X):
-        """Thêm cột 1 cho intercept (bias term)"""
         if self.fit_intercept:
             return np.c_[np.ones(X.shape[0]), X]
         return X
     
     def _remove_intercept(self):
-        """Tách bias từ weights nếu có intercept"""
         if self.fit_intercept and self.weights is not None:
             self.bias = self.weights[0]
             self.weights = self.weights[1:]
     
     def _closed_form_solution(self, X, y):
-        """
-        Giải Ridge Regression bằng công thức đóng
-        
-        Công thức: w = (X^T X + αI)^(-1) X^T y
-        
-        Returns:
-            weights: Vector trọng số
-        """
         n_samples, n_features = X.shape
         
         # X^T X
@@ -71,12 +45,6 @@ class RidgeRegressionMetaModel:
         return weights
     
     def _gradient_descent(self, X, y, learning_rate=0.01, n_iterations=1000):
-        """
-        Giải Ridge Regression bằng Gradient Descent
-        
-        Loss function: L(w) = ||y - Xw||² + α||w||²
-        Gradient: ∇L(w) = -2X^T(y - Xw) + 2αw
-        """
         n_samples, n_features = X.shape
         self.weights = np.zeros(n_features)
         
@@ -113,20 +81,6 @@ class RidgeRegressionMetaModel:
         return losses
     
     def fit(self, X_meta, y, method='closed_form', **kwargs):
-        """
-        Huấn luyện Ridge Regression Meta-Model
-        
-        Parameters:
-        -----------
-        X_meta : numpy array, shape (n_samples, n_base_models)
-            Meta-features từ base models predictions
-        y : numpy array, shape (n_samples,)
-            Target values (ratings)
-        method : str
-            Phương pháp giải: 'closed_form' hoặc 'gradient_descent'
-        **kwargs : dict
-            Tham số cho gradient descent (learning_rate, n_iterations)
-        """
         # Chuyển đổi thành numpy array
         X_meta = np.array(X_meta, dtype=np.float64)
         y = np.array(y, dtype=np.float64).flatten()
@@ -185,19 +139,6 @@ class RidgeRegressionMetaModel:
         return self
     
     def predict(self, X_meta):
-        """
-        Dự đoán với meta-model
-        
-        Parameters:
-        -----------
-        X_meta : numpy array, shape (n_samples, n_base_models)
-            Predictions từ base models
-        
-        Returns:
-        --------
-        y_pred : numpy array
-            Dự đoán cuối cùng
-        """
         X_meta = np.array(X_meta, dtype=np.float64)
         
         # Dự đoán: y = Xw + b
@@ -216,14 +157,6 @@ class RidgeRegressionMetaModel:
         return r2
     
     def get_feature_importance(self):
-        """
-        Lấy độ quan trọng của từng base model
-        
-        Returns:
-        --------
-        importance : dict
-            Dictionary với base model và weight tương ứng
-        """
         if self.weights is None:
             raise ValueError("Model chưa được trained")
         
@@ -241,19 +174,6 @@ class RidgeRegressionMetaModel:
         return importance
     
     def get_final_formula(self, base_model_names=None):
-        """
-        Lấy công thức cuối cùng của meta-model
-        
-        Parameters:
-        -----------
-        base_model_names : list
-            Tên của các base models
-        
-        Returns:
-        --------
-        formula : str
-            Công thức dự đoán
-        """
         if base_model_names is None:
             base_model_names = [f"f{i+1}(x)" for i in range(self.n_base_models)]
         
@@ -272,135 +192,3 @@ class RidgeRegressionMetaModel:
         
         formula = "ŷ = " + " ".join(formula_parts)
         return formula
-
-
-# ============================================================================
-# STACKING PIPELINE HOÀN CHỈNH VỚI RIDGE META-MODEL
-# ============================================================================
-
-
-
-
-
-# # ============================================================================
-# # DEMO VÀ TEST
-# # ============================================================================
-
-# def test_ridge_regression():
-#     """Test Ridge Regression Meta-Model"""
-#     print("\n" + "="*60)
-#     print("TEST RIDGE REGRESSION META-MODEL")
-#     print("="*60)
-    
-#     # Tạo dữ liệu giả lập: 3 base models, 100 samples
-#     np.random.seed(42)
-#     n_samples = 100
-#     n_models = 3
-    
-#     # Tạo predictions từ base models
-#     X_meta = np.random.randn(n_samples, n_models) * 0.5
-    
-#     # Tạo target: kết hợp tuyến tính của predictions + noise
-#     true_weights = np.array([0.3, 0.5, 0.2])
-#     bias = 0.5
-#     y = X_meta @ true_weights + bias + np.random.randn(n_samples) * 0.1
-    
-#     # Tạo và train Ridge Regression meta-model
-#     ridge_model = RidgeRegressionMetaModel(alpha=0.1, fit_intercept=True)
-#     ridge_model.fit(X_meta, y, method='closed_form')
-    
-#     # Dự đoán
-#     y_pred = ridge_model.predict(X_meta)
-    
-#     # Đánh giá
-#     mse = np.mean((y - y_pred) ** 2)
-#     r2 = ridge_model.r2_score
-    
-#     print(f"\nResults:")
-#     print(f"  True weights: {true_weights}")
-#     print(f"  True bias: {bias}")
-#     print(f"  Learned weights: {ridge_model.weights}")
-#     print(f"  Learned bias: {ridge_model.bias}")
-#     print(f"  MSE: {mse:.6f}")
-#     print(f"  R²: {r2:.4f}")
-    
-#     # Feature importance
-#     importance = ridge_model.get_feature_importance()
-#     print(f"\nFeature Importance:")
-#     for model, weight in importance.items():
-#         print(f"  {model}: {weight:.4f}")
-    
-#     # Final formula
-#     formula = ridge_model.get_final_formula(['f₁(x)', 'f₂(x)', 'f₃(x)'])
-#     print(f"\nFinal Formula:")
-#     print(f"  {formula}")
-    
-#     return ridge_model
-
-# def test_stacking_ensemble():
-#     """Test toàn bộ Stacking Ensemble"""
-#     print("\n" + "="*60)
-#     print("TEST STACKING ENSEMBLE")
-#     print("="*60)
-    
-#     # Tạo dữ liệu giả lập
-#     np.random.seed(42)
-#     n_samples = 200
-#     n_features = 5
-    
-#     # Features
-#     X = np.random.randn(n_samples, n_features)
-    
-#     # Target: hàm phi tuyến
-#     y = (X[:, 0] ** 2 + np.sin(X[:, 1]) + 
-#          X[:, 2] * X[:, 3] + np.random.randn(n_samples) * 0.5)
-    
-#     # Tạo base models
-#     base_models = [
-#         SimpleLinearModel(),
-#         SimpleKNN(k=7),
-#         SimpleDecisionTree(max_depth=4)
-#     ]
-    
-#     # Tạo Stacking Ensemble
-#     stacking = ManualStackingEnsemble(
-#         base_models=base_models,
-#         meta_model=RidgeRegressionMetaModel(alpha=0.5, fit_intercept=True),
-#         n_folds=3
-#     )
-    
-#     # Train
-#     stacking.fit(X, y)
-    
-#     # Predict
-#     y_pred = stacking.predict(X)
-    
-#     # Đánh giá
-#     mse = np.mean((y - y_pred) ** 2)
-#     print(f"\nStacking Ensemble Performance:")
-#     print(f"  MSE: {mse:.6f}")
-    
-#     # So sánh với base models
-#     print(f"\nBase Models Performance:")
-#     for i, model in enumerate(base_models):
-#         model_pred = model.predict(X)
-#         model_mse = np.mean((y - model_pred) ** 2)
-#         print(f"  Model {i+1}: MSE = {model_mse:.6f}")
-    
-#     # Summary
-#     stacking.get_model_summary()
-    
-#     return stacking
-
-# if __name__ == "__main__":
-#     print("🎯 IMPLEMENTING RIDGE REGRESSION META-MODEL FROM SCRATCH")
-    
-#     # Test 1: Ridge Regression Meta-Model
-#     ridge_model = test_ridge_regression()
-    
-#     # Test 2: Full Stacking Ensemble
-#     stacking_model = test_stacking_ensemble()
-    
-#     print("\n" + "="*60)
-#     print("ALL TESTS COMPLETED SUCCESSFULLY! ✅")
-#     print("="*60)

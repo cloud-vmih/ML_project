@@ -55,20 +55,6 @@ class ManualStackingEnsemble:
         return folds
     
     def fit(self, X, y):
-        """
-        Huấn luyện Stacking Ensemble
-        
-        Parameters:
-        -----------
-        X : numpy array
-            Features đầu vào
-        y : numpy array
-            Target values
-        """
-        print("=" * 60)
-        print("STACKING ENSEMBLE TRAINING")
-        print("=" * 60)
-        
         n_samples = X.shape[0]
         
         # BƯỚC 1: Tạo meta-features bằng k-fold cross-validation
@@ -96,7 +82,7 @@ class ManualStackingEnsemble:
                 # Lưu predictions vào meta-features matrix
                 self.meta_features_train[val_idx, model_idx] = y_pred_val
                 
-                print(f"    Model {model_idx+1}: {len(y_pred_val)} predictions")
+                print(f"Model {model_idx+1}: {len(y_pred_val)} predictions")
         
         # BƯỚC 2: Huấn luyện base models trên toàn bộ data
         print("\nBƯỚC 2: Huấn luyện base models trên toàn bộ dataset")
@@ -119,19 +105,6 @@ class ManualStackingEnsemble:
         return self
     
     def predict(self, X):
-        """
-        Dự đoán với Stacking Ensemble
-        
-        Parameters:
-        -----------
-        X : numpy array
-            Features đầu vào
-        
-        Returns:
-        --------
-        y_pred : numpy array
-            Dự đoán cuối cùng
-        """
         # Bước 1: Dự đoán từ base models
         base_predictions = []
         
@@ -170,4 +143,4 @@ class ManualStackingEnsemble:
         print(f"  Type: Ridge Regression")
         print(f"  Alpha (λ): {self.meta_model.alpha}")
         print(f"  Fit intercept: {self.meta_model.fit_intercept}")
-        print(f"  R² score: {self.meta_model.r2_score:.4f}")
+        print(f"  R² score: {self.meta_model.r2_score:.4f}")       
