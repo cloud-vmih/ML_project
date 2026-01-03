@@ -202,12 +202,22 @@ def main():
     print("Predicting on test set...")
     y_pred = rf.predict(X_test)
 
-    print("          ĐÁNH GIÁ HIỆU SUẤT MÔ HÌNH TRÊN TẬP TEST")
+    print("ĐÁNH GIÁ HIỆU SUẤT MÔ HÌNH TRÊN TẬP TEST:")
     print(f"RMSE                  : {rmse(y_test, y_pred):.4f}")
     print(f"MAE                   : {mae(y_test, y_pred):.4f}")
     print(f"R² Score              : {r2_score(y_test, y_pred):.4f}")
     print(f"Tỷ lệ |error| ≤ 0.5   : {percentage_within_error(y_test, y_pred, 0.5):.2f}%")
     print("="*60)
+
+    # Predict on train
+    y_train_pred = rf.predict(X_train)
+    print("\nSO SÁNH TRAIN vs TEST")
+    print("-"*50)
+    print(f"Train MAE : {mae(y_train, y_train_pred):.4f}")
+    print(f"Test  MAE : {mae(y_test, y_pred):.4f}")
+    print()
+    print(f"Train R²  : {r2_score(y_train, y_train_pred):.4f}")
+    print(f"Test  R²  : {r2_score(y_test, y_pred):.4f}")
 
 if __name__ == "__main__":
     main()
