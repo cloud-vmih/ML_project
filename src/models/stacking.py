@@ -1,5 +1,6 @@
 import numpy as np
-from meta_model.ridge_regression import RidgeRegressionMetaModel
+from models.meta_model.ridge_regression import RidgeRegressionMetaModel
+
 class ManualStackingEnsemble:
     """
     Stacking Ensemble implement hoàn toàn từ đầu
@@ -24,8 +25,10 @@ class ManualStackingEnsemble:
         
         # Sử dụng Ridge Regression làm meta-model mặc định
         if meta_model is None:
+            print("0")
             self.meta_model = RidgeRegressionMetaModel(alpha=0.5, fit_intercept=True)
         else:
+            print("1")
             self.meta_model = meta_model
             
         self.trained_base_models = []
