@@ -29,8 +29,11 @@ Chạy script chính để xử lý dữ liệu, huấn luyện mô hình và đ
 ```bash
 python main.py
 ```
-
-Điều này sẽ:
+Chạy streamlit (nên chạy - model đã được train và lưu lại, có thể test trên UI)
+```bash
+streamlit run app.py
+```
+Điều này sẽ (nếu chạy main.py):
 - Ghép nối dữ liệu thô thành [`data/raw/all_movies_data.csv`](data/raw/all_movies_data.csv ) (nếu chưa có).
 - Lọc dữ liệu theo năm 1975–2025.
 - Làm sạch và tiền xử lý dữ liệu.
