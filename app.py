@@ -31,7 +31,7 @@ def load_and_fit_preprocessors():
     print("Loading training data to fit preprocessors...")
     
     try:
-        # Load training data (giống như khi train models)
+        # Load training data 
         train_df = pd.read_csv("data/split/train.csv")
         print(f"Loaded training data: {train_df.shape}")
         
@@ -82,6 +82,9 @@ def load_custom_models():
         
         with open(f'{models_dir}/stacking_custom.pkl', 'rb') as f:
             models['stacking'] = pickle.load(f)
+            
+        with open(f'{models_dir}/stacking_not_rf_custom.pkl', 'rb') as f:
+            models['stacking_not_rf'] = pickle.load(f)
         
         st.success("Loaded custom models successfully!")
         
@@ -127,6 +130,9 @@ def load_metrics_models():
         
     with open(f"{models_dir}/stacking_metrics.json", "r") as f:
         stacking_metrics = json.load(f)
+        
+    with open(f"{models_dir}/stacking_not_rf_metrics.json", "r") as f:
+        stacking_not_metrics = json.load(f)
     
     st.success("Loaded metrics models successfully!")
     
@@ -142,7 +148,11 @@ def load_metrics_models():
     }, {
         "Model": "Stacking Ensemble",
         **stacking_metrics
-    }])
+    },{
+        "Model": "Stacking Ensemble Without RF",
+        **stacking_not_metrics
+    }
+    ])
     return metrics_df
 
 @st.cache_data
@@ -187,7 +197,7 @@ def display_model_info(model, model_name):
         col1, col2 = st.columns(2)
 
         with col1:
-            st.metric("k (Neighbors)", "min(20, sqrt(n_sample))" if params.get("k") == 'auto' else params.get("k", "N/A"))
+            st.metric("k (Neighbors)", f"k range [5:30]" if params.get("k") == 'auto' else params.get("k", "N/A"))
             st.metric("Best k", params.get("best_k", "N/A"))
 
         with col2:
