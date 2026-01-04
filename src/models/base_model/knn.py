@@ -29,7 +29,6 @@ class KNNRegressorCustom:
         kf = KFold(n_splits=cv, shuffle=True, random_state=42)
         k_values = range(self.k_range[0], self.k_range[1] + 1)
         
-        # Lưu kết quả cho từng k
         k_scores = []
         
         for k in k_values:
@@ -39,14 +38,14 @@ class KNNRegressorCustom:
                 X_train_fold, X_val_fold = X[train_idx], X[val_idx]
                 y_train_fold, y_val_fold = y[train_idx], y[val_idx]
                 
-                # Train KNN với k hiện tại trên fold
+                #Train KNN với k hiện tại trên fold
                 knn_fold = KNNRegressorCustom(k=k, weights=self.weights, metric=self.metric)
                 knn_fold.fit(X_train_fold, y_train_fold)
                 
-                # Dự đoán và tính score
+                #Dự đoán và tính score
                 y_pred = knn_fold.predict(X_val_fold)
                 
-                # Tính RMSE
+                #Tính RMSE
                 rmse = np.sqrt(np.mean((y_val_fold - y_pred) ** 2))
                 fold_scores.append(rmse)
             
@@ -84,8 +83,8 @@ class KNNRegressorCustom:
         if self.k == 'auto':
             n_samples = len(X)
             
-            #self.best_k = self._find_optimal_k_cv(X, y, cv=min(5, n_samples // 10))
-            self.best_k = self._find_optimal_k_sqrt(n_samples)
+            self.best_k = self._find_optimal_k_cv(X, y, cv=min(5, n_samples // 10))
+            #self.best_k = self._find_optimal_k_sqrt(n_samples)
             
             print(f"Auto-selected k: {self.best_k}")
         else:
@@ -94,7 +93,6 @@ class KNNRegressorCustom:
         return self
     
     def _predict_single(self, x_test):
-        """Dự đoán cho một điểm dữ liệu"""
         # Tính khoảng cách đến tất cả training points (vectorized)
         distances = self._distance(x_test, self.X_train)
         
@@ -117,13 +115,11 @@ class KNNRegressorCustom:
         return pred
     
     def predict(self, X):
-        """Dự đoán cho nhiều điểm dữ liệu"""
         X = np.array(X)
         
         if self.X_train is None:
             raise ValueError("Model chưa được huấn luyện. Gọi fit() trước.")
         
-        # Vectorized prediction
         predictions = np.array([self._predict_single(x) for x in X])
         return predictions
     
@@ -185,10 +181,11 @@ class KNNRegressorCustom:
         
         return predictions
 
+#Train thử
 import os, sys
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 sys.path.insert(0, project_root)
-from data.preprocess_for_model.knn import knn_preprocessor, KNN_FEATURES, engineer_knn_features
+from data.preprocess_for_model import knn_preprocessor
 if __name__ == "__main__":
     import pandas as pd
     train_df = pd.read_csv("data/split/train.csv")
@@ -202,17 +199,14 @@ if __name__ == "__main__":
     X_train_df = train_df.drop(columns=["rating"])
     X_test_df  = test_df.drop(columns=["rating"])
 
-    X_train_df = engineer_knn_features(X_train_df)
-    X_test_df  = engineer_knn_features(X_test_df)
-
-    X_train = knn_preprocessor.fit_transform(X_train_df[KNN_FEATURES])
-    X_test  = knn_preprocessor.transform(X_test_df[KNN_FEATURES])
+    X_train = knn_preprocessor.fit_transform(X_train_df)
+    X_test  = knn_preprocessor.transform(X_test_df)
     
     print(f"Đã tải train: {X_train.shape[0]} mẫu")
     print(f"Đã tải test : {X_test.shape[0]} mẫu\n")
         
-    print("\n2. KNN với k='auto' (tự động chọn):")
-    knn_auto = KNNRegressorCustom(k='auto', weights='distance')
+    print("\nKNN với k='auto' (tự động chọn):")
+    knn_auto = KNNRegressorCustom(k='auto', weights='distance', k_range=(5, 30))
     knn_auto.fit(X_train, y_train)
     y_pred_auto = knn_auto.predict(X_test)
     mse_auto = np.mean((y_test - y_pred_auto) ** 2)
@@ -220,8 +214,8 @@ if __name__ == "__main__":
     print(f"   MSE: {mse_auto:.4f}")
     print(f"   R² Score: {knn_auto.score(X_test, y_test):.4f}")
     
-    # Test 3: So sánh các metrics
-    print("\n3. So sánh các distance metrics:")
+    #So sánh các metrics
+    print("\nSo sánh các distance metrics:")
     for metric in ['euclidean', 'manhattan']:
         knn = KNNRegressorCustom(k=7, weights='distance', metric=metric)
         knn.fit(X_train, y_train)
@@ -230,15 +224,12 @@ if __name__ == "__main__":
     
     # Hiển thị biểu đồ chọn K nếu có
     if knn_auto.cv_results_ is not None:
-        print("\n5. Kết quả chọn K:")
         print(f"K tối ưu: {knn_auto.cv_results_['best_k']}")
         print(f"Error/Score tại K tối ưu: {knn_auto.cv_results_.get('best_score', knn_auto.cv_results_.get('best_error', 'N/A')):.4f}")
-        
         # Vẽ biểu đồ
         fig = knn_auto.plot_k_selection()
         if fig:
             import matplotlib.pyplot as plt
             plt.show()
  
-    
     print("\nTesting completed")

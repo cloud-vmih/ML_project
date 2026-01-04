@@ -1,12 +1,17 @@
 import numpy as np
+from sklearn.model_selection import KFold
+from sklearn.preprocessing import StandardScaler
 
 class RidgeRegressionMetaModel:
-    def __init__(self, alpha=0.5, fit_intercept=True):
+    def __init__(self, alpha=0.5, fit_intercept=True, auto = True):
         self.alpha = alpha
         self.fit_intercept = fit_intercept
         self.weights = None  # Vector trọng số w
-        self.bias = 0.0  # Bias term (nếu có)
-        
+        self.bias = 0.0  # Bias 
+        self.scaler = StandardScaler()
+        self.auto = auto
+        self.best_alpha = None
+
     def _add_intercept(self, X):
         if self.fit_intercept:
             return np.c_[np.ones(X.shape[0]), X]
@@ -16,10 +21,46 @@ class RidgeRegressionMetaModel:
         if self.fit_intercept and self.weights is not None:
             self.bias = self.weights[0]
             self.weights = self.weights[1:]
-    
+            
+    def choose_hyperparameters(self, cv = 5, X=None, y=None):
+        kf = KFold(n_splits=cv, shuffle=True, random_state=42)
+        alpha_values = np.linspace(0.1, 10.0, 20)
+        alpha_scores = []
+        
+        for alpha in alpha_values:
+            fold_scores = []
+            
+            for train_idx, val_idx in kf.split(X):
+                X_train_fold, X_val_fold = X[train_idx], X[val_idx]
+                y_train_fold, y_val_fold = y[train_idx], y[val_idx]
+                
+                ridge_fold = RidgeRegressionMetaModel(alpha=alpha, fit_intercept=self.fit_intercept, auto=False)
+                ridge_fold.fit(X_train_fold, y_train_fold, method='closed_form')
+                y_pred_val = ridge_fold.predict(X_val_fold)
+                rmse = np.sqrt(np.mean((y_val_fold.reshape(-1, 1) - y_pred_val) ** 2))
+                fold_scores.append(rmse)
+            
+            avg_score = np.mean(fold_scores)
+            alpha_scores.append(avg_score)
+            print(f"Alpha: {alpha:.4f} | Avg RMSE: {avg_score:.4f}")
+        
+        # Chọn alpha tốt nhất
+        best_idx = np.argmin(alpha_scores)
+        best_alpha = alpha_values[best_idx]
+        
+        self.cv_results_ = {
+            'alpha_values': alpha_values.tolist(),
+            'scores': alpha_scores,
+            'best_alpha': best_alpha,
+            'best_score': alpha_scores[best_idx]
+        }
+        
+        print(f"Alpha tối ưu: {best_alpha:.4f}")
+        self.best_alpha = best_alpha
+        return best_alpha
+        
     def _closed_form_solution(self, X, y):
         n_samples, n_features = X.shape
-        
         # X^T X
         XTX = X.T @ X
         
@@ -28,15 +69,15 @@ class RidgeRegressionMetaModel:
         
         # Nếu có intercept, không regularize bias term
         if self.fit_intercept:
-            I[0, 0] = 0  # Không regularize cột intercept
+            I[0, 0] = 0  
         
         # (X^T X + αI)
         XTX_regularized = XTX + self.alpha * I
         
         # (X^T X + αI)^(-1) X^T y
         try:
-            # Inverse của ma trận
-            weights = np.linalg.inv(XTX_regularized) @ X.T @ y
+            # Nghiệm của ma trận
+            weights = np.linalg.solve(XTX_regularized, X.T @ y)
         except np.linalg.LinAlgError:
             # Nếu ma trận singular, dùng pseudoinverse
             print("Warning: Matrix is singular, using pseudoinverse")
@@ -44,7 +85,7 @@ class RidgeRegressionMetaModel:
         
         return weights
     
-    def _gradient_descent(self, X, y, learning_rate=0.01, n_iterations=1000):
+    def _gradient_descent(self, X, y, learning_rate=0.001, n_iterations=3000):
         n_samples, n_features = X.shape
         self.weights = np.zeros(n_features)
         
@@ -57,16 +98,17 @@ class RidgeRegressionMetaModel:
             
             # Tính loss (MSE + regularization)
             mse = np.mean((y - y_pred) ** 2)
-            reg_term = self.alpha * np.sum(self.weights ** 2)
+            reg_term = self.alpha * np.sum(self.weights[1:] ** 2)
             loss = mse + reg_term
             losses.append(loss)
             
             # Tính gradient
-            # Gradient của MSE: -2 * X^T(y - Xw) / n_samples
-            mse_grad = -2 * X.T @ (y - y_pred) / n_samples
+            # Gradient của MSE: 2 * X^T(y - Xw) / n_samples
+            mse_grad = 2 * X.T @ (y_pred - y) / n_samples
             
             # Gradient của regularization: 2αw
-            reg_grad = 2 * self.alpha * self.weights
+            reg_grad = np.zeros_like(self.weights) 
+            reg_grad[1:] = 2 * self.alpha * self.weights[1:]
             
             # Gradient tổng
             gradient = mse_grad + reg_grad
@@ -84,7 +126,7 @@ class RidgeRegressionMetaModel:
         # Chuyển đổi thành numpy array
         X_meta = np.array(X_meta, dtype=np.float64)
         y = np.array(y, dtype=np.float64).flatten()
-        
+        X_meta = self.scaler.fit_transform(X_meta)
         # Thêm intercept nếu cần
         X_with_intercept = self._add_intercept(X_meta)
         
@@ -98,6 +140,10 @@ class RidgeRegressionMetaModel:
         
         if method == 'closed_form':
             # Giải bằng công thức đóng
+            if self.auto == True:
+                self.alpha = self.choose_hyperparameters(X=X_meta, y=y)
+            else:
+                self.alpha = self.alpha
             weights = self._closed_form_solution(X_with_intercept, y)
             self.weights = weights
             
@@ -108,8 +154,8 @@ class RidgeRegressionMetaModel:
                 
         elif method == 'gradient_descent':
             # Giải bằng gradient descent
-            learning_rate = kwargs.get('learning_rate', 0.01)
-            n_iterations = kwargs.get('n_iterations', 1000)
+            learning_rate = kwargs.get('learning_rate', 0.001)
+            n_iterations = kwargs.get('n_iterations', 3000)
             
             losses = self._gradient_descent(
                 X_with_intercept, y, 
@@ -134,13 +180,13 @@ class RidgeRegressionMetaModel:
         print(f"  R² score: {self.r2_score:.4f}")
         print(f"  Weights: {self.weights}")
         if self.fit_intercept:
-            print(f"  Bias: {self.bias:.4f}")
+            print(f"Bias: {self.bias:.4f}")
         
         return self
     
     def predict(self, X_meta):
         X_meta = np.array(X_meta, dtype=np.float64)
-        
+        X_meta = self.scaler.transform(X_meta)
         # Dự đoán: y = Xw + b
         y_pred = X_meta @ self.weights
         
@@ -153,7 +199,7 @@ class RidgeRegressionMetaModel:
         """Tính R² score"""
         ss_res = np.sum((y_true - y_pred) ** 2)
         ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
-        r2 = 1 - (ss_res / (ss_tot + 1e-10))  # Thêm epsilon để tránh chia 0
+        r2 = 1 - (ss_res / (ss_tot + 1e-10))  
         return r2
     
     def get_feature_importance(self):
@@ -192,3 +238,4 @@ class RidgeRegressionMetaModel:
         
         formula = "ŷ = " + " ".join(formula_parts)
         return formula
+    

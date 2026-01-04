@@ -25,7 +25,7 @@ NUMERIC_FEATURES = [
 # Danh sách categorical
 CATEGORICAL_FEATURES = ["mpa"]
 
-# ==================== feature engineering - count features ====================
+# Feature engineering
 def add_count_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     Tạo các count features từ metadata để tăng thông tin cho mô hình dự đoán rating

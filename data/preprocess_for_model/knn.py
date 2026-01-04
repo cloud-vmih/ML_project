@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, FunctionTransformer
 from sklearn.impute import SimpleImputer
 
 
@@ -50,7 +50,18 @@ KNN_FEATURES = [
     "year"
 ]
 
+def select_knn_features(df):
+    return df[KNN_FEATURES]
+
 knn_preprocessor = Pipeline(steps=[
+    (
+        "feature_engineering",
+        FunctionTransformer(engineer_knn_features, validate=False)
+    ),
+    (
+        "select_features",
+        FunctionTransformer(select_knn_features, validate=False)
+    ),
     ("imputer", SimpleImputer(strategy="median")),
     ("scaler", StandardScaler())
 ])
